@@ -1,5 +1,5 @@
-# Dockerfile for Postiz on Render
-FROM node:20-alpine AS base
+# Dockerfile for Postiz on Render - FIXED VERSION
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -8,16 +8,10 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY yarn.lock* ./
 COPY pnpm-lock.yaml* ./
 
-# Install dependencies
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+# Install dependencies using pnpm with no-frozen-lockfile
+RUN corepack enable pnpm && pnpm i --no-frozen-lockfile
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -27,12 +21,7 @@ COPY . .
 
 # Build the application
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN \
-  if [ -f yarn.lock ]; then yarn build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm build; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN corepack enable pnpm && pnpm build
 
 # Production image
 FROM base AS runner
