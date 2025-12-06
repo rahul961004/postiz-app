@@ -1,25 +1,23 @@
-# Dockerfile for Postiz on Render - FIXED VERSION
+# Dockerfile for Postiz on Render - Working Version
 FROM node:22-alpine AS base
 
-# Install dependencies only when needed
+# Install dependencies
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY pnpm-lock.yaml* ./
-
-# Install dependencies using pnpm with no-frozen-lockfile
-RUN corepack enable pnpm && pnpm i --no-frozen-lockfile
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy ALL source files FIRST (Prisma needs these for postinstall)
 COPY . .
 
+# Install dependencies - postinstall will generate Prisma client
+RUN corepack enable pnpm && pnpm i --no-frozen-lockfile
+
 # Build the application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app ./
+
+# Build
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable pnpm && pnpm build
 
@@ -32,17 +30,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+RUN apk add --no-cache openssl
 
 # Copy built application
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app ./
 
 USER nextjs
 
 EXPOSE 3000
 
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["pnpm", "start"]
