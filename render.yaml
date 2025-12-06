@@ -1,101 +1,80 @@
 # Postiz Deployment Configuration for Render.com
-# Save this as render.yaml in the root of your forked Postiz repository
+# Copy this content and create render.yaml in the root of your forked Postiz repository
+
+databases:
+  - name: postiz-db
+    databaseName: postiz
+    user: postiz
+    plan: free
 
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: postiz-db
-    plan: free
-    databaseName: postiz
-    databaseUser: postiz
-    region: oregon
-
-  # Redis Instance
   - type: redis
     name: postiz-redis
     plan: free
     maxmemoryPolicy: noeviction
-    region: oregon
+    ipAllowList: []
 
-  # Main Postiz Web Service
   - type: web
     name: postiz-social
     runtime: docker
     plan: free
-    region: oregon
-    branch: main
     dockerfilePath: ./Dockerfile
     envVars:
-      # Database Connection
       - key: DATABASE_URL
         fromDatabase:
           name: postiz-db
           property: connectionString
 
-      # Redis Connection
       - key: REDIS_URL
         fromService:
           type: redis
           name: postiz-redis
           property: connectionString
 
-      # Application URLs
       - key: NEXT_PUBLIC_BACKEND_URL
-        value: https://postiz-social.onrender.com
+        sync: false
 
       - key: BACKEND_INTERNAL_URL
         value: http://localhost:3000
 
       - key: FRONTEND_URL
-        value: https://postiz-social.onrender.com
+        sync: false
 
-      # Authentication Secrets (REPLACE WITH YOUR OWN!)
       - key: JWT_SECRET
         generateValue: true
 
       - key: ENCRYPT_KEY
         generateValue: true
 
-      # Social Platform Credentials (Add from platform developer consoles)
-      # Facebook/Instagram (Meta)
+      - key: POSTIZ_API_KEY
+        generateValue: true
+
       - key: FACEBOOK_APP_ID
         sync: false
 
       - key: FACEBOOK_APP_SECRET
         sync: false
 
-      # LinkedIn
       - key: LINKEDIN_CLIENT_ID
         sync: false
 
       - key: LINKEDIN_CLIENT_SECRET
         sync: false
 
-      # Google Business Profile
       - key: GOOGLE_CLIENT_ID
         sync: false
 
       - key: GOOGLE_CLIENT_SECRET
         sync: false
 
-      # TikTok
       - key: TIKTOK_CLIENT_KEY
         sync: false
 
       - key: TIKTOK_CLIENT_SECRET
         sync: false
 
-      # X (Twitter) - Requires $100/month
       - key: TWITTER_API_KEY
         sync: false
 
       - key: TWITTER_API_SECRET
         sync: false
-
-      # API Key for MCP Server Integration
-      - key: POSTIZ_API_KEY
-        generateValue: true
-
-    healthCheckPath: /api/health
-
-    autoDeploy: true
